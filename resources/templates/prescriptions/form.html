@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prescription Form</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-md-12">
+                <h2 th:text="${prescription.id == null ? 'New Prescription' : 'Edit Prescription'}">Prescription Form</h2>
+                
+                <div th:if="${success}" class="alert alert-success" th:text="${success}"></div>
+                <div th:if="${error}" class="alert alert-danger" th:text="${error}"></div>
+                
+                <div class="card">
+                    <div class="card-body">
+                        <form th:action="@{/prescriptions/save}" th:object="${prescription}" method="post">
+                            <input type="hidden" th:field="*{id}" />
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="patient" class="form-label">Patient</label>
+                                        <select class="form-select" th:field="*{patient.id}" required>
+                                            <option value="">Select Patient</option>
+                                            <option th:each="patient : ${patients}" 
+                                                    th:value="${patient.id}"
+                                                    th:text="${patient.patientCode + ' - ' + patient.fullName}"></option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="prescriptionDate" class="form-label">Prescription Date</label>
+                                        <input type="date" class="form-control" th:field="*{prescriptionDate}" required>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="doctorName" class="form-label">Doctor Name</label>
+                                        <input type="text" class="form-control" th:field="*{doctorName}" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="totalAmount" class="form-label">Total Amount (VND)</label>
+                                        <input type="number" class="form-control" th:field="*{totalAmount}" step="0.01" readonly>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="diagnosis" class="form-label">Diagnosis</label>
+                                <textarea class="form-control" th:field="*{diagnosis}" rows="3"></textarea>
+                            </div>
+                            
+                            <!-- Prescription Details Section -->
+                            <div class="card mb-3">
+                                <div class="card-header">
+                                    <h5>Prescription Details</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="table-responsive">
+                                        <table class="table table-sm" id="detailsTable">
+                                            <thead>
+                                                <tr>
+                                                    <th>Medicine</th>
+                                                    <th>Quantity</th>
+                                                    <th>Dosage</th>
+                                                    <th>Instruction</th>
+                                                    <th>Unit Price</th>
+                                                    <th>Total Price</th>
+                                                    <th>Action</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr th:each="detail, stat : *{prescriptionDetails}">
+                                                    <td>
+                                                        <select class="form-select form-select-sm" th:field="*{prescriptionDetails[__${stat.index}__].medicine.id}">
+                                                            <option value="">Select Medicine</option>
+                                                            <option th:each="medicine : ${medicines}" 
+                                                                    th:value="${medicine.id}"
+                                                                    th:text="${medicine.name}"></option>
+                                                        </select>
+                                                    </td>
+                                                    <td>
+                                                        <input type="number" class="form-control form-control-sm" 
+                                                               th:field="*{prescriptionDetails[__${stat.index}__].quantity}" 
+                                                               min="0" required>
+                                                    </td>
+                                                    <td>
+                                                        <input type="text" class="form-control form-control-sm" 
+                                                               th:field="*{prescriptionDetails[__${stat.index}__].dosage}">
+                                                    </td>
+                                                    <td>
+                                                        <input type="text" class="form-control form-control-sm" 
+                                                               th:field="*{prescriptionDetails[__${stat.index}__].instruction}">
+                                                    </td>
+                                                    <td>
+                                                        <input type="number" class="form-control form-control-sm" 
+                                                               th:field="*{prescriptionDetails[__${stat.index}__].unitPrice}" 
+                                                               step="0.01" min="0">
+                                                    </td>
+                                                    <td>
+                                                        <input type="number" class="form-control form-control-sm" 
+                                                               th:field="*{prescriptionDetails[__${stat.index}__].totalPrice}" 
+                                                               step="0.01" readonly>
+                                                    </td>
+                                                    <td>
+                                                        <button type="button" class="btn btn-sm btn-danger" onclick="removeRow(this)">Remove</button>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-primary" onclick="addRow()">Add Medicine</button>
+                                </div>
+                            </div>
+                            
+                            <div class="d-flex justify-content-between">
+                                <a th:href="@{/prescriptions}" class="btn btn-secondary">Back to List</a>
+                                <button type="submit" class="btn btn-primary">Save Prescription</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function addRow() {
+            const table = document.getElementById('detailsTable').getElementsByTagName('tbody')[0];
+            const rowCount = table.rows.length;
+            const row = table.insertRow(rowCount);
+            
+            row.innerHTML = `
+                <td>
+                    <select class="form-select form-select-sm" name="prescriptionDetails[${rowCount}].medicine.id">
+                        <option value="">Select Medicine</option>
+                        <option th:each="medicine : ${medicines}" 
+                                th:value="${medicine.id}"
+                                th:text="${medicine.name}"></option>
+                    </select>
+                </td>
+                <td>
+                    <input type="number" class="form-control form-control-sm" 
+                           name="prescriptionDetails[${rowCount}].quantity" 
+                           min="0" required>
+                </td>
+                <td>
+                    <input type="text" class="form-control form-control-sm" 
+                           name="prescriptionDetails[${rowCount}].dosage">
+                </td>
+                <td>
+                    <input type="text" class="form-control form-control-sm" 
+                           name="prescriptionDetails[${rowCount}].instruction">
+                </td>
+                <td>
+                    <input type="number" class="form-control form-control-sm" 
+                           name="prescriptionDetails[${rowCount}].unitPrice" 
+                           step="0.01" min="0">
+                </td>
+                <td>
+                    <input type="number" class="form-control form-control-sm" 
+                           name="prescriptionDetails[${rowCount}].totalPrice" 
+                           step="0.01" readonly>
+                </td>
+                <td>
+                    <button type="button" class="btn btn-sm btn-danger" onclick="removeRow(this)">Remove</button>
+                </td>
+            `;
+        }
+        
+        function removeRow(button) {
+            const row = button.parentNode.parentNode;
+            row.parentNode.removeChild(row);
+        }
+        
+        // Calculate total price when quantity or unit price changes
+        document.addEventListener('input', function(e) {
+            if (e.target.name && e.target.name.includes('quantity') || e.target.name.includes('unitPrice')) {
+                const row = e.target.parentNode.parentNode;
+                const quantityInput = row.querySelector('input[name*="quantity"]');
+                const unitPriceInput = row.querySelector('input[name*="unitPrice"]');
+                const totalPriceInput = row.querySelector('input[name*="totalPrice"]');
+                
+                if (quantityInput && unitPriceInput && totalPriceInput) {
+                    const quantity = parseFloat(quantityInput.value) || 0;
+                    const unitPrice = parseFloat(unitPriceInput.value) || 0;
+                    totalPriceInput.value = (quantity * unitPrice).toFixed(2);
+                }
+            }
+        });
+    </script>
+</body>
+</html>
